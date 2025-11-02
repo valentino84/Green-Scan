@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, MapPin, User, Phone, Home, Building2, MapPinned, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 import { toast } from 'sonner@2.0.3';
 import { Toaster } from './ui/sonner';
 import PropTypes from 'prop-types';
+import axios from 'axios';
 
 export function ProfileCompletion({ onComplete, onBack }) {
   const [formData, setFormData] = useState({
@@ -23,6 +24,7 @@ export function ProfileCompletion({ onComplete, onBack }) {
 
   const [errors, setErrors] = useState({});
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -31,6 +33,15 @@ export function ProfileCompletion({ onComplete, onBack }) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
+
+  // useEffect(() => {
+  //   const userId = localStorage.getItem("userId");
+  //   if (!userId) {
+  //     console.error("User ID not found in localStorage");
+  //   }
+  // }, []);
+  const userId = localStorage.getItem("userId");
+  const token = localStorage.getItem("token");
 
   const validateForm = () => {
     const newErrors = {};
@@ -53,7 +64,7 @@ export function ProfileCompletion({ onComplete, onBack }) {
 
   const handleGetLocation = () => {
     setIsGettingLocation(true);
-    
+
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -121,11 +132,40 @@ export function ProfileCompletion({ onComplete, onBack }) {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validateForm()) onComplete(formData);
-  };
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   if (validateForm()) onComplete(formData);
+  // };
 
+  // ✅ API integration added here
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+        `http://localhost:8080/api/v1/mainuser/register/complete/${userId}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Profile completion success:", response.data);
+      toast.success("Profile completed successfully!");
+      onComplete(formData);
+    } catch (error) {
+      console.error("Profile completion failed:", error);
+      toast.error("Profile completion failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <>
       <Toaster richColors position="top-center" />
@@ -179,9 +219,8 @@ export function ProfileCompletion({ onComplete, onBack }) {
                   placeholder="Enter your full name"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 ${
-                    errors.name ? 'border-red-500' : ''
-                  }`}
+                  className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 ${errors.name ? 'border-red-500' : ''
+                    }`}
                 />
                 {errors.name && (
                   <p className="text-red-500 text-sm">{errors.name}</p>
@@ -201,9 +240,8 @@ export function ProfileCompletion({ onComplete, onBack }) {
                     placeholder="10-digit mobile number"
                     value={formData.mobile}
                     onChange={(e) => handleInputChange('mobile', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 pl-10 ${
-                      errors.mobile ? 'border-red-500' : ''
-                    }`}
+                    className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 pl-10 ${errors.mobile ? 'border-red-500' : ''
+                      }`}
                   />
                 </div>
                 {errors.mobile && (
@@ -230,9 +268,8 @@ export function ProfileCompletion({ onComplete, onBack }) {
                   placeholder="Street address, building name"
                   value={formData.addressLine1}
                   onChange={(e) => handleInputChange('addressLine1', e.target.value)}
-                  className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 ${
-                    errors.addressLine1 ? 'border-red-500' : ''
-                  }`}
+                  className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 ${errors.addressLine1 ? 'border-red-500' : ''
+                    }`}
                 />
                 {errors.addressLine1 && (
                   <p className="text-red-500 text-sm">{errors.addressLine1}</p>
@@ -268,9 +305,8 @@ export function ProfileCompletion({ onComplete, onBack }) {
                       placeholder="City"
                       value={formData.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
-                      className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 pl-10 ${
-                        errors.city ? 'border-red-500' : ''
-                      }`}
+                      className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 pl-10 ${errors.city ? 'border-red-500' : ''
+                        }`}
                     />
                   </div>
                   {errors.city && (
@@ -288,9 +324,8 @@ export function ProfileCompletion({ onComplete, onBack }) {
                     placeholder="State"
                     value={formData.state}
                     onChange={(e) => handleInputChange('state', e.target.value)}
-                    className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 ${
-                      errors.state ? 'border-red-500' : ''
-                    }`}
+                    className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 ${errors.state ? 'border-red-500' : ''
+                      }`}
                   />
                   {errors.state && (
                     <p className="text-red-500 text-sm">{errors.state}</p>
@@ -311,9 +346,8 @@ export function ProfileCompletion({ onComplete, onBack }) {
                     placeholder="6-digit pincode"
                     value={formData.pincode}
                     onChange={(e) => handleInputChange('pincode', e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 pl-10 ${
-                      errors.pincode ? 'border-red-500' : ''
-                    }`}
+                    className={`bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 pl-10 ${errors.pincode ? 'border-red-500' : ''
+                      }`}
                   />
                 </div>
                 {errors.pincode && (
@@ -333,7 +367,7 @@ export function ProfileCompletion({ onComplete, onBack }) {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                   We need your location to connect you with nearby vendors and schedule pickups.
                 </p>
-                
+
                 <Button
                   type="button"
                   onClick={handleGetLocation}
@@ -357,7 +391,7 @@ export function ProfileCompletion({ onComplete, onBack }) {
                     </>
                   )}
                 </Button>
-                
+
                 {errors.latitude && (
                   <p className="text-red-500 text-sm mt-2">{errors.latitude}</p>
                 )}

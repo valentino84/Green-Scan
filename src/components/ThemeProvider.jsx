@@ -41,7 +41,25 @@ export function ThemeProvider({ children, defaultTheme = 'light', storageKey = '
     setThemeState(newTheme);
   };
 
-  const value = { theme, setTheme, toggleTheme };
+  const [user, setUser] = useState(() => {
+        // Load from localStorage if exists
+        const storedUser = localStorage.getItem("user");
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
+
+    const login = ({ userId, accessToken, role }) => {
+        const userData = { userId, accessToken, role };
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+    };
+
+    const logout = () => {
+        setUser(null);
+        localStorage.removeItem("user");
+    };
+
+
+  const value = { theme, setTheme, toggleTheme ,user, login, logout  };
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>

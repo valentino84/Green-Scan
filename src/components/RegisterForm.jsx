@@ -1,21 +1,23 @@
-import { useState } from 'react';
-import { motion } from 'motion/react';
-import PropTypes from 'prop-types';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import PropTypes from "prop-types";
+import axios from "axios";
 
 export function RegisterForm({ onRegisterSuccess, onGoToLogin }) {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'user'
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    mobile: "",
+    role: "END_USER",
   });
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -23,30 +25,49 @@ export function RegisterForm({ onRegisterSuccess, onGoToLogin }) {
     e.preventDefault();
     setIsLoading(true);
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      alert("Passwords do not match!");
       setIsLoading(false);
       return;
     }
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // ✅ API request using axios
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/auth/register",
+        formData
+      );
 
-    // Here you would typically make an API call to register the user
-    // For now, we'll simulate a successful registration
-    console.log('Registering user:', formData);
+      console.log("✅ Registration success:", response.data);
 
-    // Automatically login after successful registration
-    onRegisterSuccess(formData.role);
-    setIsLoading(false);
+      // ✅ Store userId in localStorage
+      const userId = response.data.user.id; // Make sure your API returns userId
+      console.log("✅ Storing userId in localStorage:", userId);
+      localStorage.setItem("userId", userId);
+      localStorage.setItem("token", response.data.accessToken);
+
+      // Trigger success callback (e.g. navigate to next step)
+      onRegisterSuccess(formData.role, formData.email, userId);
+    } catch (error) {
+      console.error("❌ Registration failed:", error);
+      alert(
+        error.response?.data?.message ||
+        "Registration failed. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="mx-auto w-80">
       <div className="text-center mb-6">
-        <h2 className="text-green-800 dark:text-green-200 mb-2">Create Account</h2>
-        <p className="text-green-600 dark:text-green-400 text-sm">Join the green revolution today</p>
+        <h2 className="text-green-800 dark:text-green-200 mb-2">
+          Create Account
+        </h2>
+        <p className="text-green-600 dark:text-green-400 text-sm">
+          Join the green revolution today
+        </p>
       </div>
 
       <motion.form
@@ -56,117 +77,98 @@ export function RegisterForm({ onRegisterSuccess, onGoToLogin }) {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.5 }}
       >
+        {/* Name */}
         <motion.input
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          whileFocus={{ scale: 1.05 }}
           type="text"
           name="name"
           placeholder="Full Name"
           value={formData.name}
           onChange={handleInputChange}
-          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 outline-none"
           required
         />
 
+        {/* Email */}
         <motion.input
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          whileFocus={{ scale: 1.05 }}
           type="email"
           name="email"
           placeholder="Email Address"
           value={formData.email}
           onChange={handleInputChange}
-          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 outline-none"
           required
         />
 
+        {/* Password */}
         <motion.input
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          whileFocus={{ scale: 1.05 }}
           type="password"
           name="password"
           placeholder="Password"
           value={formData.password}
           onChange={handleInputChange}
-          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 outline-none"
           required
           minLength={6}
         />
 
+        {/* Confirm Password */}
         <motion.input
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-          whileFocus={{ scale: 1.05 }}
           type="password"
           name="confirmPassword"
           placeholder="Confirm Password"
           value={formData.confirmPassword}
           onChange={handleInputChange}
-          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 outline-none"
           required
           minLength={6}
         />
 
+        {/* Mobile */}
+        <motion.input
+          type="tel"
+          name="mobile"
+          placeholder="Mobile Number"
+          value={formData.mobile}
+          onChange={handleInputChange}
+          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 outline-none"
+          required
+          pattern="[0-9]{10}"
+        />
+
         {/* Role Selection */}
         <motion.select
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.6, duration: 0.5 }}
-          whileFocus={{ scale: 1.05 }}
           name="role"
           value={formData.role}
           onChange={handleInputChange}
-          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+          className="w-full p-3 border border-green-200 dark:border-green-700 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500 outline-none"
         >
-          <option value="user">End User - Recycle & Earn</option>
-          <option value="vendor">Vendor - Pickup Service</option>
-          <option value="admin">Admin - Platform Management</option>
-          <option value="assistant">Assistant - Pickup Helper</option>
-          <option value="advertisement">Advertisement Company - Campaign Management</option>
+          <option value="END_USER">End User - Recycle & Earn</option>
+          <option value="VENDOR">Vendor - Pickup Service</option>
+          <option value="ADMIN">Admin - Platform Management</option>
+          <option value="PICKUP_ASSISTANT">Pickup Assistant</option>
+          <option value="ADS_COMPANY">
+            Advertisement Company - Campaign Management
+          </option>
         </motion.select>
 
+        {/* Submit Button */}
         <motion.button
           type="submit"
           disabled={isLoading}
+          className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition-all disabled:opacity-50 shadow-lg"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.5 }}
-          className="w-full bg-green-600 dark:bg-green-500 text-white p-3 rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
         >
-          {isLoading ? (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex items-center justify-center"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
-              />
-              Creating Account...
-            </motion.span>
-          ) : (
-            'Create Account & Start Recycling'
-          )}
+          {isLoading ? "Creating Account..." : "Create Account & Start Recycling"}
         </motion.button>
       </motion.form>
 
       <div className="mt-6 text-center">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <button
             onClick={onGoToLogin}
-            className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors underline"
+            className="text-green-600 hover:text-green-700 underline"
           >
             Sign In
           </button>
@@ -176,4 +178,7 @@ export function RegisterForm({ onRegisterSuccess, onGoToLogin }) {
   );
 }
 
-RegisterForm.propTypes = { onGoToLogin: PropTypes.any, onRegisterSuccess: PropTypes.any };
+RegisterForm.propTypes = {
+  onRegisterSuccess: PropTypes.func,
+  onGoToLogin: PropTypes.func,
+};

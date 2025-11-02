@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
+import axios from "axios";
+import { useContext } from "react";
+import { useTheme } from './ThemeProvider';
+
 
 export function LoginForm({ onLoginSuccess, onGoToRegister }) {
   const [formData, setFormData] = useState({
@@ -8,15 +12,17 @@ export function LoginForm({ onLoginSuccess, onGoToRegister }) {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const { login } = useTheme();
+
 
   // Email to role mapping
-  const emailRoleMapping = {
-    'enduser@123': 'user',
-    'admin@123': 'admin',
-    'vendor@123': 'vendor',
-    'assistant@123': 'assistant',
-    'advertisement@123': 'advertisement'
-  };
+  // const emailRoleMapping = {
+  //   'enduser@123': 'user',
+  //   'admin@123': 'admin',
+  //   'vendor@123': 'vendor',
+  //   'assistant@123': 'assistant',
+  //   'advertisement@123': 'advertisement'
+  // };
 
   const handleInputChange = (e) => {
     setFormData({
@@ -32,23 +38,50 @@ export function LoginForm({ onLoginSuccess, onGoToRegister }) {
     setError('');
 
     // Simulate API call for login validation
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // await new Promise(resolve => setTimeout(resolve, 1000));
 
-    if (formData.email && formData.password) {
-      // Check if email exists in our mapping
-      const userRole = emailRoleMapping[formData.email];
+    // if (formData.email && formData.password) {
+    //   // Check if email exists in our mapping
+    //   const userRole = emailRoleMapping[formData.email];
 
-      if (userRole) {
-        console.log('Logging in user:', { ...formData, role: userRole });
-        onLoginSuccess(userRole);
-      } else {
-        setError('Invalid email address. Please use one of the registered emails.');
-      }
-    } else {
-      setError('Please enter both email and password');
+    //   if (userRole) {
+    //     console.log('Logging in user:', { ...formData, role: userRole });
+    //     onLoginSuccess(userRole);
+    //   } else {
+    //     setError('Invalid email address. Please use one of the registered emails.');
+    //   }
+    // } else {
+    //   setError('Please enter both email and password');
+    // }
+
+    // setIsLoading(false);
+    try {
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/auth/login",
+        formData,
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      console.log("Login success:", response.data);
+
+      // Use AuthContext to save user globally
+      const userId = response.data.user.id;
+      const accessToken = response.data.accessToken;
+      const role = response.data.user.role;
+
+      login({ userId, accessToken, role }); // <-- here
+
+      // Optional: navigate or trigger callback
+      onLoginSuccess(role);
+
+    } catch (err) {
+      console.error("Login failed:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
 
-    setIsLoading(false);
+
   };
 
   const inputVariants = {
