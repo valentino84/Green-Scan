@@ -8,6 +8,9 @@ import { Textarea } from './ui/textarea';
 import { ThemeToggle } from './ThemeToggle';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner@2.0.3';
+import axios from "axios";
+
+
 import {
     ArrowLeft,
     MapPin,
@@ -35,6 +38,8 @@ export function PickupDetailsForm({
     const [city, setCity] = useState('');
     const [pincode, setPincode] = useState('');
     const [pickupInstructions, setPickupInstructions] = useState('');
+    const [loading, setLoading] = useState(false);
+
 
     // Location coordinates (in real app, would use geolocation or geocoding)
     const [latitude, setLatitude] = useState(18.5204);
@@ -44,8 +49,20 @@ export function PickupDetailsForm({
     const [selectedVendor, setSelectedVendor] = useState(preSelectedVendor || null);
     const [showVendorList, setShowVendorList] = useState(false);
     const [vendorSearchQuery, setVendorSearchQuery] = useState('');
-
+    const userId = localStorage.getItem("userId");
+    const token = localStorage.getItem("token");
     // Available vendors (mock data - would come from API)
+    //     useEffect(() => {
+    //     const fetchVendors = async () => {
+    //       try {
+    //         const res = await axios.get('http://localhost:8080/api/v1/vendors');
+    //         setVendors(res.data);
+    //       } catch (err) {
+    //         console.error('Error fetching vendors:', err);
+    //       }
+    //     };
+    //     fetchVendors();
+    //   }, []);
     const [availableVendors] = useState([
         {
             id: 1,
@@ -88,6 +105,8 @@ export function PickupDetailsForm({
             estimatedWaitTime: "Tomorrow, 2-4 PM"
         }
     ]);
+    console.log("Available Vendors:", cartData);
+    console.log("Available User ID:", userId);
 
     // Filter vendors based on search
     const filteredVendors = availableVendors.filter(vendor =>
@@ -111,7 +130,7 @@ export function PickupDetailsForm({
         // navigator.geolocation.getCurrentPosition(...)
     }, []);
 
-    const handleSchedulePickup = () => {
+    const handleSchedulePickup = async () => {
         if (!isFormValid()) {
             toast.error('Please fill in all required fields', {
                 description: 'Vendor, address line 1, city, and pincode are required.'
@@ -141,13 +160,43 @@ export function PickupDetailsForm({
         toast.loading('Scheduling your pickup...', {
             id: 'schedule-pickup'
         });
+        
+        try {
+            const response = await axios.post(
+                `http://localhost:8080/api/v1/end_users/carts/pickup-scheduling`,
+                pickupDetails,
+                {
+                    params: {
+                        userId: userId,
+                        cartId: cartData.id,
+                    },
+                    headers: {
+                        'Content-Type': 'application/json',
+                         Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
-        // Simulate API call delay
-        setTimeout(() => {
             toast.dismiss('schedule-pickup');
-            // In a real app, this would make an API call to create the pickup request
-            onScheduleComplete(pickupDetails);
-        }, 1500);
+            toast.success('Pickup scheduled successfully!');
+            console.log('Response:', response.data);
+
+            onScheduleComplete(response.data);
+        } catch (error) {
+            toast.dismiss('schedule-pickup');
+            console.error('Error scheduling pickup:', error);
+            toast.error('Failed to schedule pickup', {
+                description: error.response?.data?.message || error.message,
+            });
+        } finally {
+            setLoading(false);
+        }
+        // Simulate API call delay
+        // setTimeout(() => {
+        //     toast.dismiss('schedule-pickup');
+        //     // In a real app, this would make an API call to create the pickup request
+        //     onScheduleComplete(pickupDetails);
+        // }, 1500);
     };
 
     const handleUseCurrentLocation = () => {
@@ -347,8 +396,8 @@ export function PickupDetailsForm({
                                             setVendorSearchQuery('');
                                         }}
                                         className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${selectedVendor?.id === vendor.id
-                                                ? 'border-green-400 bg-green-50 dark:border-green-500 dark:bg-green-900/20'
-                                                : 'border-green-200 dark:border-green-700 bg-white dark:bg-gray-800'
+                                            ? 'border-green-400 bg-green-50 dark:border-green-500 dark:bg-green-900/20'
+                                            : 'border-green-200 dark:border-green-700 bg-white dark:bg-gray-800'
                                             }`}
                                     >
                                         <div className="flex items-start justify-between">
@@ -532,8 +581,8 @@ export function PickupDetailsForm({
                         onClick={handleSchedulePickup}
                         disabled={!isFormValid()}
                         className={`w-full py-6 text-lg font-medium ${isFormValid()
-                                ? 'bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600'
-                                : 'bg-gray-400 cursor-not-allowed'
+                            ? 'bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600'
+                            : 'bg-gray-400 cursor-not-allowed'
                             }`}
                     >
                         <CheckCircle className="w-5 h-5 mr-2" />

@@ -68,6 +68,8 @@ export function LoginForm({ onLoginSuccess, onGoToRegister }) {
       const userId = response.data.user.id;
       const accessToken = response.data.accessToken;
       const role = response.data.user.role;
+      localStorage.setItem("userId", userId);
+      localStorage.setItem("token", accessToken);
 
       login({ userId, accessToken, role }); // <-- here
 

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { ThemeToggle } from './ThemeToggle';
+import axios from "axios";
 import { Logo } from './Logo';
 import {
   ArrowLeft,
@@ -20,33 +21,38 @@ import {
   Zap
 } from 'lucide-react';
 
-export function Cart({ onBack, cartId = 1, onGoToItemScanner, selectedVendor: propSelectedVendor }) {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Plastic Bottles",
-      category: "Plastic",
-      weight: 2.5,
-      coinsPerKg: 25,
-      verified: true
-    },
-    {
-      id: 2,
-      name: "Aluminum Cans",
-      category: "Metal",
-      weight: 1.2,
-      coinsPerKg: 45,
-      verified: true
-    },
-    {
-      id: 3,
-      name: "Cardboard Box",
-      category: "Paper",
-      weight: 0.8,
-      coinsPerKg: 15,
-      verified: false
-    }
-  ]);
+export function Cart({ onBack, cartId, onGoToItemScanner, selectedVendor: propSelectedVendor, onGoToPickupDetails }) {
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const baseURL = "http://localhost:8080";
+  const userId = localStorage.getItem("userId");
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        const response = await axios.get(
+          `${baseURL}/api/v1/end_users/carts/${cartId}/items/`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        localStorage.setItem("cartId", cartId);
+        setCartItems(response.data);
+        console.log("Fetched cart items:", response.data);
+      } catch (error) {
+        console.error("Error fetching cart items:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCartItems();
+  }, [baseURL, cartId, token]);
+
 
   const [selectedVendor, setSelectedVendor] = useState(
     propSelectedVendor ? {
@@ -93,12 +99,12 @@ export function Cart({ onBack, cartId = 1, onGoToItemScanner, selectedVendor: pr
 
   const calculateTotalCoins = () => {
     return cartItems.reduce((total, item) => {
-      return total + (item.weight * item.coinsPerKg);
+      return total + (item.estimatedWeight * item.estimatedCoins);
     }, 0);
   };
 
   const calculateTotalWeight = () => {
-    return cartItems.reduce((total, item) => total + item.weight, 0);
+    return cartItems.reduce((total, item) => total + item.estimatedWeight, 0);
   };
 
   const isPickupEligible = () => {
@@ -110,7 +116,7 @@ export function Cart({ onBack, cartId = 1, onGoToItemScanner, selectedVendor: pr
     setCartItems(items =>
       items.map(item =>
         item.id === id
-          ? { ...item, weight: Math.max(0.1, item.weight + delta) }
+          ? { ...item, estimatedWeight: Math.max(0.1, item.estimatedWeight + delta) }
           : item
       )
     );
@@ -218,14 +224,14 @@ export function Cart({ onBack, cartId = 1, onGoToItemScanner, selectedVendor: pr
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <h4 className="text-green-800 dark:text-green-200 font-medium">{item.name}</h4>
+                          <h4 className="text-green-800 dark:text-green-200 font-medium">{item.itemName}</h4>
                           {item.verified && (
                             <CheckCircle className="w-4 h-4 text-green-500" />
                           )}
                         </div>
                         <p className="text-green-600 dark:text-green-400 text-sm">{item.category}</p>
                         <p className="text-green-600 dark:text-green-400 text-sm">
-                          {item.coinsPerKg} coins/kg
+                          {item.estimatedCoins} coins/kg
                         </p>
                       </div>
                     </div>
@@ -253,7 +259,7 @@ export function Cart({ onBack, cartId = 1, onGoToItemScanner, selectedVendor: pr
                           <Minus className="w-3 h-3" />
                         </Button>
                         <span className="text-green-800 dark:text-green-200 font-medium min-w-[60px] text-center">
-                          {item.weight.toFixed(1)} kg
+                          {item.estimatedWeight.toFixed(1)} kg
                         </span>
                         <Button
                           variant="outline"
@@ -268,7 +274,7 @@ export function Cart({ onBack, cartId = 1, onGoToItemScanner, selectedVendor: pr
 
                     <div className="text-right">
                       <p className="text-green-800 dark:text-green-200 font-medium">
-                        {(item.weight * item.coinsPerKg).toFixed(0)} coins
+                        {(item.estimatedWeight * item.estimatedCoins).toFixed(0)} coins
                       </p>
                     </div>
                   </div>
@@ -379,6 +385,7 @@ export function Cart({ onBack, cartId = 1, onGoToItemScanner, selectedVendor: pr
         <div className="space-y-3 pt-4">
           {isPickupEligible() ? (
             <Button
+              onClick={() => onGoToPickupDetails && onGoToPickupDetails()}
               className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white py-4 text-lg font-medium"
             >
               <Zap className="w-5 h-5 mr-2" />

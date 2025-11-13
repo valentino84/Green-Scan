@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Button } from './ui/button';
+import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -27,6 +28,7 @@ export function ItemScanner({ onBack }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+
 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
@@ -84,71 +86,205 @@ export function ItemScanner({ onBack }) {
     setIsCameraMode(false);
   };
 
-  const handleFileUpload = (event) => {
+  // const handleFileUpload = (event) => {
+  //   const file = event.target.files?.[0];
+  //   console.log('Uploaded file:', file);
+  //   if (file) {
+  //     const reader = new FileReader();
+  //     reader.onload = (e) => {
+  //       const imageData = e.target?.result;
+  //       setSelectedImage(imageData);
+  //       simulateAIScanning(imageData);
+  //     };
+  //     reader.readAsDataURL(file);
+  //   }
+  // };
+
+
+  const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageData = e.target?.result;
-        setSelectedImage(imageData);
-        simulateAIScanning(imageData);
-      };
-      reader.readAsDataURL(file);
-    }
+    console.log("Uploaded file:", file);
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const imageData = e.target?.result;
+      setSelectedImage(imageData);
+      simulateAIScanning(imageData); // optional (AI detection)
+
+      // useEffect(() => {
+      //   const storedUserId = localStorage.getItem("userId");
+      //   const storedToken = localStorage.getItem("token");
+      //   const storedCartId = localStorage.getItem("cartId");
+
+      //   setUserId(storedUserId);
+      //   setToken(storedToken);
+      //   setCartId(storedCartId);
+
+      // }, [])
+
+
+      // ✅ Upload to backend right after user uploads the image
+      try {
+
+        const cartId = localStorage.getItem("cartId");
+        const userId = localStorage.getItem("userId");
+        const token = localStorage.getItem("token");
+
+        if (!userId || !token) {
+          alert("User not logged in!");
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file); // ✅ send actual file
+        formData.append("userId", userId);
+
+        const response = await axios.post(
+          `http://localhost:8080/api/v1/end_users/carts/${cartId}/items/add`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        if (response.status === 200) {
+          console.log("✅ Item added to cart:", response.data.items);
+
+          // alert("Item successfully added to your cart!");
+          // onBack();
+          // 👇 assuming response.data contains the item object
+          const items = response.data.items || response.data;
+
+
+          const addedItem = items.length > 0 ? items[items.length - 1] : null;
+
+          if (addedItem) {
+            // localStorage.setItem("lastitemid", addedItem.id);
+            setScannedItem(addedItem);
+            setIsScanning(false);
+            console.log("🟢 Last added item:", addedItem);
+          } else {
+            console.warn("⚠️ No items found in response.");
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error adding item:", error);
+        if (error.response) {
+          alert(error.response.data.message || "Failed to add item to cart");
+        } else {
+          alert("Network error or server not responding.");
+        }
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
+
+  // console.log('Selected Image:', selectedImage);
   const simulateAIScanning = async (imageData) => {
     setIsScanning(true);
     await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
 
-    const mockItems = [
-      {
-        name: "Plastic Water Bottle",
-        material: "PET Plastic",
-        weight: 0.5,
-        minWeight: 0.3,
-        maxWeight: 0.8,
-        coinsPerKg: 25,
-        confidence: 94
-      },
-      {
-        name: "Aluminum Can",
-        material: "Aluminum",
-        weight: 0.4,
-        minWeight: 0.2,
-        maxWeight: 0.6,
-        coinsPerKg: 45,
-        confidence: 89
-      },
-      {
-        name: "Cardboard Box",
-        material: "Corrugated Cardboard",
-        weight: 1.2,
-        minWeight: 0.8,
-        maxWeight: 2.0,
-        coinsPerKg: 15,
-        confidence: 76
-      },
-      {
-        name: "Glass Bottle",
-        material: "Clear Glass",
-        weight: 0.8,
-        minWeight: 0.5,
-        maxWeight: 1.2,
-        coinsPerKg: 20,
-        confidence: 91
+    // const mockItems = [
+    //   {
+    //     name: "Plastic Water Bottle",
+    //     material: "PET Plastic",
+    //     weight: 0.5,
+    //     minWeight: 0.3,
+    //     maxWeight: 0.8,
+    //     coinsPerKg: 25,
+    //     confidence: 94
+    //   },
+    //   {
+    //     name: "Aluminum Can",
+    //     material: "Aluminum",
+    //     weight: 0.4,
+    //     minWeight: 0.2,
+    //     maxWeight: 0.6,
+    //     coinsPerKg: 45,
+    //     confidence: 89
+    //   },
+    //   {
+    //     name: "Cardboard Box",
+    //     material: "Corrugated Cardboard",
+    //     weight: 1.2,
+    //     minWeight: 0.8,
+    //     maxWeight: 2.0,
+    //     coinsPerKg: 15,
+    //     confidence: 76
+    //   },
+    //   {
+    //     name: "Glass Bottle",
+    //     material: "Clear Glass",
+    //     weight: 0.8,
+    //     minWeight: 0.5,
+    //     maxWeight: 1.2,
+    //     coinsPerKg: 20,
+    //     confidence: 91
+    //   }
+    // ];
+
+    // const randomItem = mockItems[Math.floor(Math.random() * mockItems.length)];
+    // setScannedItem(randomItem);
+    // setIsScanning(false);
+  };
+  // new code
+
+
+  // const handleAddToCart = () => {
+  //   console.log('Adding item to cart:', scannedItem);
+  //   onBack();
+  // };
+
+  // new code
+  const handleAddToCart = async () => {
+    if (!scannedItem) return;
+
+    try {
+      const cartId = localStorage.getItem("cartId");
+      const userId = localStorage.getItem("userId");
+      const token = localStorage.getItem("token");
+      const itemId = scannedItem.id;
+      const baseURL = "http://localhost:8080";
+
+      if (!userId || !token) {
+        alert("User not logged in!");
+        return;
       }
-    ];
 
-    const randomItem = mockItems[Math.floor(Math.random() * mockItems.length)];
-    setScannedItem(randomItem);
-    setIsScanning(false);
+      const response = await axios.patch(
+        `${baseURL}/api/v1/end_users/carts/${cartId}/${itemId}/confirm`,
+        {}, // ✅ empty request body
+        {
+          params: { confirmed: true },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("✅ Item confirmed:", response.data);
+      alert("Item successfully confirmed and added to cart!");
+      // alert("Item successfully added to your cart!");
+      onBack();
+
+    } catch (error) {
+      console.error("❌ Error confirming item:", error);
+      if (error.response) {
+        alert(error.response.data.message || "Failed to confirm item");
+      } else {
+        alert("Network error or server not responding.");
+      }
+    }
   };
 
-  const handleAddToCart = () => {
-    console.log('Adding item to cart:', scannedItem);
-    onBack();
-  };
+
+
+
 
   const updateWeight = (newWeight) => {
     if (scannedItem && newWeight >= scannedItem.minWeight && newWeight <= scannedItem.maxWeight) {
@@ -357,7 +493,7 @@ export function ItemScanner({ onBack }) {
                   <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
                   Item Identified
                   <span className="ml-auto text-sm bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                    {scannedItem.confidence}% confidence
+                    {scannedItem.aiConfidenceScore}% confidence
                   </span>
                 </CardTitle>
               </CardHeader>
@@ -366,8 +502,8 @@ export function ItemScanner({ onBack }) {
                   <div className="flex items-center space-x-3">
                     <Package className="w-5 h-5 text-green-600 dark:text-green-400" />
                     <div>
-                      <p className="text-green-800 dark:text-green-200 font-medium">{scannedItem.name}</p>
-                      <p className="text-green-600 dark:text-green-400 text-sm">{scannedItem.material}</p>
+                      <p className="text-green-800 dark:text-green-200 font-medium">{scannedItem.itemName}</p>
+                      <p className="text-green-600 dark:text-green-400 text-sm">{scannedItem.materialType}</p>
                     </div>
                   </div>
 
@@ -375,7 +511,7 @@ export function ItemScanner({ onBack }) {
                     <Tag className="w-5 h-5 text-green-600 dark:text-green-400" />
                     <div>
                       <p className="text-green-800 dark:text-green-200 font-medium">
-                        {scannedItem.coinsPerKg} coins/kg
+                        {scannedItem.estimatedCoins} coins/kg
                       </p>
                       <p className="text-green-600 dark:text-green-400 text-sm">Coin rate</p>
                     </div>
@@ -403,7 +539,8 @@ export function ItemScanner({ onBack }) {
                     <div className="flex-1">
                       <Input
                         type="number"
-                        value={scannedItem.weight.toFixed(1)}
+                        value={scannedItem.estimatedWeight}
+                        // value={scannedItem.estimatedWeight.toFixed(1)}
                         onChange={(e) => updateWeight(parseFloat(e.target.value))}
                         min={scannedItem.minWeight}
                         max={scannedItem.maxWeight}
@@ -432,7 +569,7 @@ export function ItemScanner({ onBack }) {
                   <div className="flex items-center justify-between">
                     <span className="text-green-700 dark:text-green-300">Estimated Coins:</span>
                     <span className="text-green-800 dark:text-green-200 font-bold text-lg">
-                      {(scannedItem.weight * scannedItem.coinsPerKg).toFixed(0)}
+                      {(scannedItem.estimatedWeight * scannedItem.estimatedCoins).toFixed(0)}
                     </span>
                   </div>
                 </div>
